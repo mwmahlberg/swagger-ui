@@ -30,13 +30,13 @@ name: SonarCloud analysis
 
 on:
   push:
-    branches: [ "master", "develop" ]
+    branches: ["master", "develop"]
   pull_request:
-    branches: [ "master", "develop" ]
+    branches: ["master", "develop"]
   workflow_dispatch:
 
 permissions:
-  pull-requests: read # allows SonarCloud to decorate PRs with analysis results
+  pull-requests: read   # allows SonarCloud to decorate PRs with analysis results
 
 jobs:
   Analysis:
