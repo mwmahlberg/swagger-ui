@@ -2,55 +2,100 @@ package swaggerui
 
 import (
 	"embed"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"io/fs"
-	"log"
 	"net/http"
-	"strconv"
+
+	"github.com/asaskevich/govalidator"
+	"github.com/jncornett/overlayfs"
+	"github.com/mwmahlberg/memfs"
 )
 
 //go:embed swagger-ui/dist
 var swaggerui embed.FS
-var ErrInvalidJson = errors.New("input is not valid JSON data")
 
-func Handler(swaggerfile []byte) (http.Handler, http.FileSystem, error) {
-	if !json.Valid(swaggerfile) {
-		return nil, nil, ErrInvalidJson
-	}
+// HandlerOptions are used to initialize the handler.
+type HandlerOption func(*SwaggerUi)
 
-	fs.WalkDir(swaggerui, ".", func(path string, d fs.DirEntry, err error) error {
-		log.Println(path)
-		return nil
-	})
+const (
+	DefaultSpecfileName = "swagger.yaml"
+)
 
-	file := swaggerHandler(swaggerfile)
-	ui, err := swaggerUIhandler()
-	if ui == nil && err != nil {
-		return nil, nil, fmt.Errorf("creating ui: %s", err)
-	}
+var (
+	ErrEmptyData     = errors.New("no data was provided for the spec file")
+	ErrInvalidJson   = errors.New("input is not valid JSON data")
+	ErrEmptyFileName = errors.New("empty file name was provided")
+	ErrNoJsonSuffix  = errors.New("name JSON spec does not end in '.json'")
+)
 
-	return file, ui, nil
+// SwaggerUi is a handler that serves the swagger-ui.
+type SwaggerUi struct {
+	specFilename       string `valid:"matchingFilename"`
+	specContent        []byte `valid:"correctContent"`
+	initializerContent []byte `valid:"length(249)"` // The min length is the length of a minified version of a swagger-initializer
+	fs                 fs.FS  `valid:"-"`
 }
 
-func swaggerUIhandler() (http.FileSystem, error) {
-	fsys, err := fs.Sub(swaggerui, "swagger-ui/dist")
-	if err != nil {
-		return nil, err
+// New returns a new SwaggerUi handler.
+func New(opts ...HandlerOption) (*SwaggerUi, error) {
+	var ui = &SwaggerUi{
+		specFilename: DefaultSpecfileName}
+
+	for _, opt := range opts {
+		opt(ui)
 	}
-	fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
-		log.Println(path)
-		return nil
-	})
-	return http.FS(fsys), nil
+
+	if len(ui.initializerContent) == 0 {
+		if ui.specFilename == "" {
+			return nil, SetupError{Cause: errors.New("no specfilename and no initializer given")}
+		}
+		ui.initializerContent = getInitializer(ui.specFilename, "")
+	}
+
+	if isValid, err := govalidator.ValidateStruct(ui); !isValid {
+		return nil, SetupError{Cause: err}
+	}
+	return ui, nil
 }
 
-func swaggerHandler(swaggerfile []byte) http.Handler {
-	contentLength := strconv.Itoa(len(swaggerfile))
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Length", contentLength)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(swaggerfile)
-	})
+// Sets the name under which the data will be served as a spec file.
+func Spec(name string, data []byte) HandlerOption {
+	return func(suh *SwaggerUi) {
+		suh.specFilename = name
+		suh.specContent = data
+	}
+}
+
+// Instead of using InitializerTemplate, you can provide your own.
+func InitializerContent(code []byte) HandlerOption {
+	return func(suh *SwaggerUi) {
+		suh.initializerContent = code
+	}
+}
+
+// FileSystem returns the http.FileSystem that is used to serve the swagger-ui.
+func (ui *SwaggerUi) FileSystem() fs.FS {
+
+	// Ensure this is a singleton
+	if ui.fs == nil {
+		ui.fs = ui.setupfs()
+	}
+	return ui.fs
+}
+
+// FileServer returns a http.Handler that serves the swagger-ui.
+func (ui *SwaggerUi) FileServer() http.Handler {
+	strippedUi, _ := fs.Sub(swaggerui, "swagger-ui/dist")
+	ofs := overlayfs.NewOverlayFs(http.FS(strippedUi), http.FS(ui.FileSystem()))
+	return http.FileServer(ofs)
+}
+
+func (ui *SwaggerUi) setupfs() fs.FS {
+	overlay := memfs.New()
+
+	overlay.WriteFile(ui.specFilename, ui.specContent, 0644)
+
+	overlay.WriteFile("swagger-initializer.js", ui.initializerContent, 0644)
+
+	return overlay
 }
