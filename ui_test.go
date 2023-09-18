@@ -28,7 +28,7 @@ func TestSetupFs(t *testing.T) {
 				hasSpecFile = true
 				assert.Equal(t, "bar", string(b))
 			}
-			if d.Name() == "swagger-initializer.js" {
+			if d.Name() == InitializerFilename {
 				hasInitializer = true
 			}
 		}
@@ -49,11 +49,11 @@ func (suite *UiSuite) TestCustomInitializerContent() {
 	assert.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), h)
 
-	initjs, err := h.FileSystem().Open("swagger-initializer.js")
+	initjs, err := h.FileSystem().Open(InitializerFilename)
 	assert.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), initjs)
 
-	b, err := fs.ReadFile(h.FileSystem(), "swagger-initializer.js")
+	b, err := fs.ReadFile(h.FileSystem(), InitializerFilename)
 	assert.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), b)
 	assert.Equal(suite.T(), content, b)
