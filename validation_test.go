@@ -9,13 +9,19 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-var validYaml = `
+const (
+	yamlTestFilename = "foo.yaml"
+	jsonTestFilename = "foo.json"
+)
+
+var (
+	validYaml = `
 foo: bar
 `
-
-var validJson = `
+	validJson = `
 {"this":{"is":"json"}}
 `
+)
 
 type structWithYaml struct {
 	Content interface{} `valid:"isYaml"`
@@ -118,7 +124,7 @@ func (suite *isAcceptedFileNameSuite) TestFilenameValidation() {
 	}{
 		{
 			desc:     "YAML extension, lowercase",
-			filename: "foo.yaml",
+			filename: yamlTestFilename,
 		},
 		{
 			desc:     "YAML extension, uppercase",
@@ -134,11 +140,11 @@ func (suite *isAcceptedFileNameSuite) TestFilenameValidation() {
 		},
 		{
 			desc:     "JSON extension, lowercase",
-			filename: "foo.json",
+			filename: jsonTestFilename,
 		},
 		{
 			desc:     "JSON extension, uppercase",
-			filename: "foo.JSON",
+			filename: jsonTestFilename,
 		},
 	}
 	for _, tC := range testCases {
@@ -203,37 +209,37 @@ func (suite *CorrectContentTestSuite) TestStringFunction() {
 		{
 			desc:               "YAML data with .yaml filename",
 			content:            validYaml,
-			filename:           "foo.yaml",
+			filename:           yamlTestFilename,
 			expectedToValidate: true,
 		},
 		{
 			desc:               "YAML data with .json filename",
 			content:            validYaml,
-			filename:           "foo.json",
+			filename:           jsonTestFilename,
 			expectedToValidate: false,
 		},
 		{
 			desc:               "JSON data with .json filename",
 			content:            validJson,
-			filename:           "foo.json",
+			filename:           jsonTestFilename,
 			expectedToValidate: true,
 		},
 		{
 			desc:               "JSON data with .yaml filename",
 			content:            validJson,
-			filename:           "foo.yaml",
+			filename:           yamlTestFilename,
 			expectedToValidate: false,
 		},
 		{
 			desc:               "Grabage data pretending to be YAML",
 			content:            randString(100),
-			filename:           "foo.yaml",
+			filename:           yamlTestFilename,
 			expectedToValidate: false,
 		},
 		{
 			desc:               "Grabage data pretending to be JSON",
 			content:            randString(100),
-			filename:           "foo.json",
+			filename:           jsonTestFilename,
 			expectedToValidate: false,
 		},
 	}
@@ -259,37 +265,37 @@ func (suite *CorrectContentTestSuite) TestFunction() {
 		{
 			desc:               "YAML data with .yaml filename",
 			content:            []byte(validYaml),
-			filename:           "foo.yaml",
+			filename:           yamlTestFilename,
 			expectedToValidate: true,
 		},
 		{
 			desc:               "YAML data with .json filename",
 			content:            []byte(validYaml),
-			filename:           "foo.json",
+			filename:           jsonTestFilename,
 			expectedToValidate: false,
 		},
 		{
 			desc:               "JSON data with .json filename",
 			content:            []byte(validJson),
-			filename:           "foo.json",
+			filename:           jsonTestFilename,
 			expectedToValidate: true,
 		},
 		{
 			desc:               "JSON data with .yaml filename",
 			content:            []byte(validJson),
-			filename:           "foo.yaml",
+			filename:           yamlTestFilename,
 			expectedToValidate: false,
 		},
 		{
 			desc:               "Grabage data pretending to be YAML",
 			content:            []byte(randString(100)),
-			filename:           "foo.yaml",
+			filename:           yamlTestFilename,
 			expectedToValidate: false,
 		},
 		{
 			desc:               "Grabage data pretending to be JSON",
 			content:            []byte(randString(100)),
-			filename:           "foo.json",
+			filename:           jsonTestFilename,
 			expectedToValidate: false,
 		},
 	}
