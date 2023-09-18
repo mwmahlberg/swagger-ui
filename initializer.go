@@ -1,4 +1,6 @@
 /* 
+ *  initializer.go is part of github.com/mwmahlberg/swagger-ui project.
+ *  
  *  Copyright 2023 Markus W Mahlberg
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
