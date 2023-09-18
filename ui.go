@@ -19,6 +19,7 @@ type HandlerOption func(*SwaggerUi)
 
 const (
 	DefaultSpecfileName = "swagger.yaml"
+	InitializerFilename = "swagger-initializer.js"
 )
 
 var (
