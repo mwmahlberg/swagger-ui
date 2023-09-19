@@ -4,9 +4,9 @@ go 1.20
 
 require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
-	github.com/jncornett/overlayfs v0.0.0-20170122175154-0f6cc3508dc3
 	github.com/mwmahlberg/memfs v0.0.0-20230918193141-c70e9e0684de
 	github.com/stretchr/testify v1.8.4
+	github.com/yalue/merged_fs v1.2.3
 	gopkg.in/yaml.v3 v3.0.1
 )
 

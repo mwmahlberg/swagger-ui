@@ -1,14 +1,14 @@
-/* 
+/*
  *  validation_test.go is part of github.com/mwmahlberg/swagger-ui project.
- *  
+ *
  *  Copyright 2023 Markus W Mahlberg
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -43,6 +43,10 @@ foo: bar
 
 type structWithYaml struct {
 	Content interface{} `valid:"isYaml"`
+}
+
+type structWithFilename struct {
+	Filename string `valid:"acceptedFileName"`
 }
 
 type isYamlSuite struct {
@@ -168,6 +172,40 @@ func (suite *isAcceptedFileNameSuite) TestFilenameValidation() {
 	for _, tC := range testCases {
 		suite.T().Run(tC.desc, func(t *testing.T) {
 			assert.True(t, isAcceptedFileName(tC.filename, nil))
+		})
+	}
+}
+
+func (suite *isAcceptedFileNameSuite) TestFilenameStructValidation() {
+	testCases := []struct {
+		desc               string
+		str                structWithFilename
+		expectedToValidate bool
+	}{
+		{
+			desc: "Valid extension YAML",
+			str: structWithFilename{
+				Filename: yamlTestFilename,
+			},
+			expectedToValidate: true,
+		},
+		{
+			desc: "Valid extension JSON",
+			str: structWithFilename{
+				Filename: jsonTestFilename,
+			},
+			expectedToValidate: true,
+		}, {
+			desc: "Invalid extension",
+			str: structWithFilename{
+				Filename: "foo.gnampf",
+			},
+			expectedToValidate: false,
+		},
+	}
+	for _, tC := range testCases {
+		suite.T().Run(tC.desc, func(t *testing.T) {
+			assert.True(t, isAcceptedFileName(tC.str.Filename, nil) == tC.expectedToValidate)
 		})
 	}
 }
