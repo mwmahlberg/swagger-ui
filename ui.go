@@ -16,17 +16,71 @@
  *  limitations under the License.
  */
 
+/*
+ *  ui.go is part of github.com/mwmahlberg/swagger-ui project.
+ *
+ *  Copyright 2023 Markus W Mahlberg
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package swaggerui
 
 import (
+	"bytes"
 	"embed"
 	"errors"
+	"fmt"
+	"html/template"
 	"io/fs"
 	"net/http"
 
 	"github.com/asaskevich/govalidator"
-	"github.com/jncornett/overlayfs"
 	"github.com/mwmahlberg/memfs"
+	"github.com/yalue/merged_fs"
+)
+
+const (
+	// DefaultSpecfileName is the default name of the spec file.
+	DefaultSpecfileName string = "swagger.yaml"
+	// InitializerFilename is the default name of the initializer file.
+	InitializerFilename string = "swagger-initializer.js"
+
+	// This is the template for the initializer.js file, which is used to initialize the swagger-ui.
+	// Alternatively, you can provide your own initializer by using the InitializerContent option.
+	InitializerTemplate string = `
+window.onload = function () {
+  //<editor-fold desc="Changeable Configuration Block">
+
+  // the following lines will be replaced by docker/configurator, when it runs in a docker-container
+  window.ui = SwaggerUIBundle({
+    url: "{{- if .Prefix -}}{{.Prefix}}{{- else -}}.{{- end -}}/{{.Filename}}",
+    dom_id: '#swagger-ui',
+    deepLinking: true,
+    presets: [
+      SwaggerUIBundle.presets.apis,
+      SwaggerUIStandalonePreset
+    ],
+    plugins: [
+      SwaggerUIBundle.plugins.DownloadUrl
+    ],
+    layout: "StandaloneLayout"
+  });
+
+  //</editor-fold>
+};
+`
+	embedPrefix string = "swagger-ui/dist"
 )
 
 //go:embed swagger-ui/dist
@@ -35,17 +89,26 @@ var swaggerui embed.FS
 // HandlerOptions are used to initialize the handler.
 type HandlerOption func(*SwaggerUi)
 
-const (
-	DefaultSpecfileName = "swagger.yaml"
-	InitializerFilename = "swagger-initializer.js"
-)
-
 // SwaggerUi is a handler that serves the swagger-ui.
 type SwaggerUi struct {
-	specFilename       string `valid:"matchingFilename"`
-	specContent        []byte `valid:"correctContent"`
-	initializerContent []byte `valid:"length(249)"` // The min length is the length of a minified version of a swagger-initializer
-	fs                 fs.FS  `valid:"-"`
+	// specFilename string `valid:"acceptedFileName~File name is wrong"`
+
+	Overlay    *memfs.FS           `valid:"-"` // The overlay fs that is used to serve the custom spec and initializer
+	Static     *fs.FS              `valid:"-"` // The base fs that is used to serve the static files of swagger-ui
+	Merged     *merged_fs.MergedFS `valid:"-"` // The overlayfs that is used to serve the swagger-ui
+	fileServer http.Handler        `valid:"-"` // The fileserver that is used to serve the swagger-ui
+
+	specFilename string `valid:"stringlength(1|255)~File name is wrong)"`
+	specContent  []byte `valid:"correctContent~File content is wrong"`
+
+	initializerContent []byte `valid:"length(249|16384)~Initializer too small"` // The min length is the length of a minified version of a swagger-initializer
+
+}
+
+// ServeHTTP implements the http.Handler interface.
+// It serves the swagger-ui, the spec file and the initializer by using the merged fs via http.FileServer.
+func (ui *SwaggerUi) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ui.fileServer.ServeHTTP(w, r)
 }
 
 // New returns a new SwaggerUi handler.
@@ -58,15 +121,23 @@ func New(opts ...HandlerOption) (*SwaggerUi, error) {
 	}
 
 	if len(ui.initializerContent) == 0 {
-		if ui.specFilename == "" {
-			return nil, SetupError{Cause: errors.New("no specfilename and no initializer given")}
-		}
 		ui.initializerContent = getInitializer(ui.specFilename, "")
 	}
 
 	if isValid, err := govalidator.ValidateStruct(ui); !isValid {
-		return nil, SetupError{Cause: err}
+		fmt.Println(err)
+		return nil, SetupError{Cause: errors.New("invalid options: " + err.Error())}
 	}
+
+	if err := ui.setupOverlay(); err != nil {
+		return nil, SetupError{Cause: errors.New("error setting up overlay: " + err.Error())}
+	}
+
+	if err := ui.setupStatic(); err != nil {
+		return nil, SetupError{Cause: errors.New("error setting up static: " + err.Error())}
+	}
+	ui.Merged = merged_fs.NewMergedFS(fs.FS(ui.Overlay), *ui.Static)
+	ui.fileServer = http.FileServer(http.FS(ui.Merged))
 	return ui, nil
 }
 
@@ -78,36 +149,49 @@ func Spec(name string, data []byte) HandlerOption {
 	}
 }
 
-// Instead of using InitializerTemplate, you can provide your own.
+// Instead of using the default "swagger-initializer.js", you can provide your own.
 func InitializerContent(code []byte) HandlerOption {
 	return func(suh *SwaggerUi) {
 		suh.initializerContent = code
 	}
 }
 
-// FileSystem returns the http.FileSystem that is used to serve the swagger-ui.
-func (ui *SwaggerUi) FileSystem() fs.FS {
+// Returns the name of the spec file served by the handler.
+func (ui *SwaggerUi) SpecFilename() string {
+	return ui.specFilename
+}
 
-	// Ensure this is a singleton
-	if ui.fs == nil {
-		ui.fs = ui.setupfs()
+func (ui *SwaggerUi) setupOverlay() error {
+	o := memfs.New()
+
+	if err := o.WriteFile(ui.specFilename, ui.specContent, 0644); err != nil {
+		return errors.New("error writing specfile: " + err.Error())
 	}
-	return ui.fs
+
+	if err := o.WriteFile(InitializerFilename, ui.initializerContent, 0644); err != nil {
+		return errors.New("error writing initializer: " + err.Error())
+	}
+
+	ui.Overlay = o
+	return nil
 }
 
-// FileServer returns a http.Handler that serves the swagger-ui.
-func (ui *SwaggerUi) FileServer() http.Handler {
-	strippedUi, _ := fs.Sub(swaggerui, "swagger-ui/dist")
-	ofs := overlayfs.NewOverlayFs(http.FS(strippedUi), http.FS(ui.FileSystem()))
-	return http.FileServer(ofs)
+func (ui *SwaggerUi) setupStatic() (err error) {
+	sub, err := fs.Sub(swaggerui, embedPrefix)
+	if err != nil {
+		return errors.New("error setting up base: " + err.Error())
+	}
+	ui.Static = &sub
+	return nil
 }
 
-func (ui *SwaggerUi) setupfs() fs.FS {
-	overlay := memfs.New()
+func getInitializer(filename string, prefix string) []byte {
+	tmpl, _ := template.New(InitializerFilename).Parse(InitializerTemplate)
+	var rendered bytes.Buffer
+	tmpl.Execute(&rendered, struct {
+		Prefix   string
+		Filename string
+	}{Prefix: prefix, Filename: filename})
 
-	overlay.WriteFile(ui.specFilename, ui.specContent, 0644)
-
-	overlay.WriteFile("swagger-initializer.js", ui.initializerContent, 0644)
-
-	return overlay
+	return rendered.Bytes()
 }

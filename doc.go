@@ -1,14 +1,14 @@
-/* 
- *  error.go is part of github.com/mwmahlberg/swagger-ui project.
- *  
+/*
+ *  doc.go is part of github.com/mwmahlberg/swagger-ui project.
+ *
  *  Copyright 2023 Markus W Mahlberg
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,16 +16,5 @@
  *  limitations under the License.
  */
 
+// swagger-ui provides a simple http.Handler that serves the Swagger UI and the Swagger spec file.
 package swaggerui
-
-import "fmt"
-
-var defaultSetupErrorMsgTmpl = "setting up swagger-ui: %s"
-
-type SetupError struct {
-	Cause error
-}
-
-func (s SetupError) Error() string {
-	return fmt.Sprintf(defaultSetupErrorMsgTmpl, s.Cause)
-}
