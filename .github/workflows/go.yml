@@ -70,7 +70,6 @@ jobs:
             -Dsonar.organization=mwmahlberg
             -Dsonar.tests=.
             -Dsonar.test.inclusions=**/*_test.go
-            -Dsonar.test.exclusions=**/vendor/**,**/testdata/**,swagger-ui/**
             -Dsonar.go.coverage.reportPaths=coverage.out
             -Dsonar.go.tests.reportPaths=report.json
             -Dsonar.links.homepage=https://github.com/mwmahlberg/swagger-ui
