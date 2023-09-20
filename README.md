@@ -36,7 +36,7 @@ func main() {
 
   flag.Parse()
 
-  ui, err := swaggerui.New(swaggerui.Spec(swaggerui.DefaultSpecfileName, []byte(petStore)))
+  ui, err := swaggerui.New(swaggerui.Spec(swaggerui.DefaultSpecfileName, petStore))
   if err != nil {
     log.Fatalln(err)
   }
