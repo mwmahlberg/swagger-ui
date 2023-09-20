@@ -29,12 +29,12 @@
 name: SonarCloud analysis
 
 on:
-  push:
-    branches: ["master", "develop"]
-  pull_request:
-    branches: ["master", "develop"]
   workflow_dispatch:
-
+  workflow_run:
+    workflows: ["Build and Test"]
+    branches: ["master", "develop"]
+    types:
+      - completed
 permissions:
   pull-requests: read   # allows SonarCloud to decorate PRs with analysis results
 
@@ -43,6 +43,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Get test reports
+        uses: actions/download-artifact@v2
+        with:
+          name: test-reports
       - name: Analyze with SonarCloud
 
         # You can pin the exact commit or the version.
