@@ -66,6 +66,7 @@ jobs:
           args:
             # Unique keys of your project and organization. You can find them in SonarCloud > Information (bottom-left menu)
             # mandatory
+            # -Dsonar.go.tests.reportPaths=report.json
             -Dsonar.projectKey=mwmahlberg_swagger-ui
             -Dsonar.organization=mwmahlberg
             -Dsonar.sources=.
@@ -73,12 +74,12 @@ jobs:
             -Dsonar.test.inclusions=**/*_test.go
             -Dsonar.tests=.
             -Dsonar.go.coverage.reportPaths=coverage.out
-            -Dsonar.go.tests.reportPaths=report.json
             -Dsonar.links.homepage=https://github.com/mwmahlberg/swagger-ui
             -Dsonar.links.ci=https://github.com/mwmahlberg/swagger-ui/actions
             -Dsonar.links.scm=https://github.com/mwmahlberg/swagger-ui
             -Dsonar.links.issue=https://github.com/mwmahlberg/swagger-ui/issues
             -Dsonar.scm.provider=git
+            -Dsonar.verbose=true
             # Comma-separated paths to directories containing main source files.
             #-Dsonar.sources= # optional, default is project base directory
             # When you need the analysis to take place in a directory other than the one from which it was launched
