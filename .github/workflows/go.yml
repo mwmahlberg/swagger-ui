@@ -68,8 +68,10 @@ jobs:
             # mandatory
             -Dsonar.projectKey=mwmahlberg_swagger-ui
             -Dsonar.organization=mwmahlberg
-            -Dsonar.tests=.
+            -Dsonar.sources=.
+            -Dsonar.exclusions=**/*_test.go,**/*_generated*.go,**/*_generated/**,**/vendor/**,**/swagger-ui/**
             -Dsonar.test.inclusions=**/*_test.go
+            -Dsonar.tests=.
             -Dsonar.go.coverage.reportPaths=coverage.out
             -Dsonar.go.tests.reportPaths=report.json
             -Dsonar.links.homepage=https://github.com/mwmahlberg/swagger-ui
