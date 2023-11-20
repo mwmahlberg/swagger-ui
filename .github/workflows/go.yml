@@ -35,7 +35,7 @@ jobs:
         run: go test -coverprofile coverage.out -json -v ./... > report.json
 
       - name: Upload test reports
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: test-reports
           path: |
@@ -50,7 +50,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Get test reports
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: test-reports
       - name: Analyze with SonarCloud
