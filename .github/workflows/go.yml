@@ -43,6 +43,7 @@ jobs:
             report.json
 
   SonarCloud:
+    name: Scan with SonarCloud
     runs-on: ubuntu-latest
     needs: Build
     steps:
