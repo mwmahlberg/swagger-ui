@@ -88,30 +88,3 @@ jobs:
             #-Dsonar.tests= # optional. For more info about Code Coverage, please refer to https://docs.sonarcloud.io/enriching/test-coverage/overview/
             # Adds more detail to both client and server-side analysis logs, activating DEBUG mode for the scanner, and adding client-side environment variables and system properties to the server-side log of analysis report processing.
             #-Dsonar.verbose= # optional, default is false
-
-  Qwiet:
-    runs-on: ubuntu-latest
-    needs: Build
-    steps:
-    - name: Checkout with submodules
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.21'
-    - name: Download the Qwiet CLI and set permissions
-      run: |
-        curl https://cdn.shiftleft.io/download/sl > ${GITHUB_WORKSPACE}/sl && chmod a+rx ${GITHUB_WORKSPACE}/sl
-
-    # Qwiet requires Java 1.8
-    - name: Set up Java
-      uses: actions/setup-java@v1.4.3
-      with:
-        java-version: 1.8
-
-    - name: Analyze application with Qwiet
-      run: ${GITHUB_WORKSPACE}/sl analyze --app ShiftLeftGo --tag branch=${{ github.head_ref || steps.extract_branch.outputs.branch }} --go $(pwd)
-      env:
-        SHIFTLEFT_ACCESS_TOKEN: ${{ secrets.SHIFTLEFT_ACCESS_TOKEN }}
