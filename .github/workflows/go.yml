@@ -93,8 +93,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: Build
     steps:
-    - name: Checkout
+    - name: Checkout with submodules
       uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '^1.21'
     - name: Download the Qwiet CLI and set permissions
       run: |
         curl https://cdn.shiftleft.io/download/sl > ${GITHUB_WORKSPACE}/sl && chmod a+rx ${GITHUB_WORKSPACE}/sl
